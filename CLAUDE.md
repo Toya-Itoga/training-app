@@ -37,6 +37,15 @@
 ## 禁止事項
 - .envファイルの参照
 - any型の乱用禁止
+- ハードコードされたダミーデータを本番コードに含めないこと
+- TODOコメントを残したまま実装を完了しないこと
+- import文にsrc.プレフィックスを含めないこと
+
+## Lambda対応
+- 静的ファイルのパスはsrc/を含めないこと
+  - StaticFiles(directory="static")
+  - Jinja2Templates(directory="templates")
+- import文はsrc.を含めないこと
 
 ## 更新ポリシー
 - 機能追加時はREADME.mdを更新すること
