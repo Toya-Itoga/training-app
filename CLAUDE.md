@@ -1,21 +1,22 @@
 # CLAUDE.md
 
 ## アーキテクチャ
-- 
+- レイヤードアーキテクチャ
 
 ## レンダリング方式
-- 
+- サーバサイドレンダリング
 
 ## ディレクトリ・ファイル構成
 - `.venv/`                - 仮想環境
-- `src/`                  - アプリ本体
-- `src/`
-- `src/`
-- `src/`
-- `src/`
-- `src/`
-- `src/`
-- `src/`
+- `src/main.py`           - アプリ本体
+- `src/routers`           - ルータ層(エンドポイント定義)
+- `src/services`          - サービス層
+- `src/repositories`      - リポジトリ層(DBアクセス)
+- `src/utils`             - ユーティリティ関数定義
+- `src/templates`         - HTML
+- `src/static/js`         - JavaScript
+- `src/static/css`        - CSS
+- `src/database.py`       - DB接続設定(ローカル)
 - `config/`               - 設定・ドキュメント
 - `scripts/`              - 開発補助スクリプト
 - `tests/`                - テストコード
@@ -51,7 +52,42 @@
 - 機能追加時はREADME.mdを更新すること
 - AIが間違った動作をしたらここに反映すること
 
+## 認証
+- 認証はPyJWTを使用すること
+- トークン有効期間は6時間とすること
+- 全てのAPIエンドポイントでトークン検証を行うこと
+- FastAPIのDependsを使用して共通の認証ミドルウェアとして実装すること
+- 認証処理はsrc/services/auth_service.pyに定義すること
+
+## 環境設定
+- ローカル開発時はダミーユーザーを返さないこと
+- ENV=developmentの場合はDynamoDB Localを使用すること
+
+## 環境変数
+- ENV: 実行環境(development / production)
+- DYNAMODB_ENDPOINT: DynamoDBエンドポイント(ローカル: http://localhost:5434)
+- DYNAMODB_REGION: AWSリージョン(ap-northeast-1)
+- AWS_ACCESS_KEY_ID: AWSアクセスキー
+- AWS_SECRET_ACCESS_KEY: AWSシークレットキー
+- USER_TABLE_NAME: Userテーブル名
+- WORKOUT_TABLE_NAME: Workoutテーブル名
+- EXERCISE_TABLE_NAME: Exerciseテーブル名
+- JWT_SECRET_KEY: JWT署名キー
+- JWT_ALGORITHM: JWTアルゴリズム(HS256)
+- JWT_EXPIRE_HOURS: トークン有効期間(6)
+- PORT: サーバーポート番号
+
 ## 技術スタック
-- 
-- 
-- 
+- Python3.12
+- FastAPI
+- uvicorn
+- Jinja2
+- SQLite(ローカル開発時)
+- DynamoDB(本番)
+- HTMX
+- Alpine.js
+- boto3
+- PyJWT
+- bcrypt
+- Mangum
+- python-ulid
