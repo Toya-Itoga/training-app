@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}履歴{% endblock %}
+{% block body %}
+<div class="app">
+  {% set active = "history" %}{% include "_sidebar.html" %}
+
+  <main class="main">
+    <div class="topbar">
+      <div class="crumbs">
+        <div class="eyebrow">/ HISTORY · CALENDAR</div>
+        <h1>トレーニング履歴</h1>
+      </div>
+      <div class="actions">
+        <a class="btn primary" href="/record" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px">
+          <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          記録を追加
+        </a>
+      </div>
+    </div>
+
+    <div class="main-fit">
+      {% include "partials/calendar.html" %}
+    </div>
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}DASHBOARD{% endblock %}
+{% block body %}
+<div class="app">
+  {% set active = "dashboard" %}{% include "_sidebar.html" %}
+
+  <main class="main">
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="crumbs">
+        <div class="eyebrow">/ DASHBOARD · {{ stats.today }}</div>
+        <h1>WELCOME BACK, {{ user.username | upper }}</h1>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/record">
+          <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M3 7v10M18 4v16M21 7v10M6 12h12"/></svg>
+          続きを記録
+        </a>
+        <a class="btn primary" href="/record">
+          <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          新規記録
+        </a>
+      </div>
+    </div>
+
+    <div class="main-fit">
+      <!-- Stats row -->
+      <div class="grid g-cols-3">
+        <div class="stat">
+          <div class="stat-label">今週のトレーニング</div>
+          <div class="stat-value">{{ stats.week_count }}<span class="unit">/ 7</span></div>
+          <div class="stat-delta">今週実施日数</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">今週の総ボリューム</div>
+          <div class="stat-value num">{{ "%.1f" | format(stats.total_volume / 1000) }}<span class="unit">TON</span></div>
+          <div class="stat-delta">{{ stats.total_volume | int | string }} KG 合計</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">平均ボリューム / 回</div>
+          <div class="stat-value num">{{ stats.avg_volume | int }}<span class="unit">KG</span></div>
+          <div class="stat-delta">最高 {{ stats.max_volume | int }} KG</div>
+        </div>
+      </div>
+
+      <!-- Body: chart + recent -->
+      <div class="grid" style="grid-template-columns:1fr 1.3fr;flex:1;min-height:0">
+
+        <!-- Week volume chart -->
+        <div class="card flush" style="display:flex;flex-direction:column">
+          <div class="card-header">
+            <span class="card-title" style="white-space:nowrap">今週のボリューム</span>
+            <span class="eyebrow" style="white-space:nowrap">{{ stats.monday }}</span>
+          </div>
+          <div class="card-body" style="display:flex;flex-direction:column;height:100%;gap:0">
+            <div class="week-bars" style="height:auto;flex:1;min-height:0">
+              {% for col in chart_cols %}
+              <div class="col{{ ' done' if col.done else '' }}{{ ' today' if col.is_today else '' }}">
+                <div class="b-wrap" style="flex:1;width:100%;display:flex;flex-direction:column;justify-content:flex-end">
+                  <div class="b" style="height:{{ col.height_pct if col.done else 0 }}%{% if not col.done %};min-height:4px{% endif %}">
+                    {% if col.done %}<span class="b-val">{{ "%.1f" | format(col.volume / 1000) }}</span>{% endif %}
+                  </div>
+                </div>
+                <div class="lab">{{ col.label }}</div>
+              </div>
+              {% endfor %}
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);gap:14px">
+              <div style="flex:1;min-width:0">
+                <div class="label-xs" style="white-space:nowrap">平均 / 回</div>
+                <div class="display" style="font-size:26px;margin-top:4px">{{ stats.avg_volume | int }}<span style="font-size:11px;color:var(--fg-3);margin-left:4px;font-family:var(--font-mono);letter-spacing:0.12em">KG</span></div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div class="label-xs" style="white-space:nowrap">最大 / 1回</div>
+                <div class="display" style="font-size:26px;margin-top:4px">{{ stats.max_volume | int }}<span style="font-size:11px;color:var(--fg-3);margin-left:4px;font-family:var(--font-mono);letter-spacing:0.12em">KG</span></div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div class="label-xs" style="white-space:nowrap">実施日 / 週</div>
+                <div class="display" style="font-size:26px;margin-top:4px">{{ stats.week_count }}<span style="font-size:11px;color:var(--fg-3);margin-left:4px;font-family:var(--font-mono);letter-spacing:0.12em">日</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent sessions -->
+        <div class="card flush">
+          <div class="card-header">
+            <span class="card-title">直近のトレーニング</span>
+            <a class="btn sm ghost" href="/history" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none">
+              すべて見る
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+          </div>
+          <div class="card-body recent-list" style="padding-top:4px;overflow:hidden">
+            {% if recent %}
+              {% for w in recent %}
+              <a class="recent-row recent-row-lg" href="/history" style="background:transparent;border:0;color:inherit;text-align:left;cursor:pointer;width:100%;text-decoration:none;display:grid">
+                <div class="date-block">
+                  <div class="d">{{ w.day }}</div>
+                  <div class="m">{{ w.month }}</div>
+                </div>
+                <div style="min-width:0">
+                  <div class="title">{{ w.part_label }} DAY</div>
+                  <div class="sub-line">
+                    <span class="chip accent" style="flex-shrink:0">{{ w.total_sets }} SETS</span>
+                    <span class="sub">{{ w.exercise_names }}</span>
+                  </div>
+                </div>
+                <div class="vol">
+                  {{ w.total_volume | int }}
+                  <span class="vol-sub">KG</span>
+                </div>
+              </a>
+              {% endfor %}
+            {% else %}
+              <div style="padding:40px;text-align:center;color:var(--fg-3)">
+                <p style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.1em">トレーニングを記録してください</p>
+                <a class="btn primary" href="/record" style="margin-top:16px;text-decoration:none;display:inline-flex">
+                  <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                  最初の記録を追加
+                </a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

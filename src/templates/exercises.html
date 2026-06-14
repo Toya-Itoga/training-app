@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}種目管理{% endblock %}
+{% block body %}
+<div class="app">
+  {% set active = "exercises" %}{% include "_sidebar.html" %}
+
+  <main class="main" x-data="exerciseStore()" x-cloak>
+    <div class="topbar">
+      <div class="crumbs">
+        <div class="eyebrow">/ EXERCISE MASTER</div>
+        <h1>種目管理</h1>
+      </div>
+      <div class="actions">
+        <button class="btn primary" @click="openAdd()">
+          <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          新規種目
+        </button>
+      </div>
+    </div>
+
+    <!-- Part filter chips -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;flex-shrink:0">
+      <a class="chip accent" href="/exercises" style="cursor:pointer;text-decoration:none">
+        ALL · {{ total }}
+      </a>
+      {% for part in parts %}
+      <span class="chip">{{ part.en }} · {{ grouped | selectattr("id", "equalto", part.id) | map(attribute="exercises") | first | length }}</span>
+      {% endfor %}
+    </div>
+
+    <div class="main-scroll">
+      {% for group in grouped %}
+      <div class="ex-group">
+        <div class="ex-group-head">
+          <div class="ex-group-title">
+            <span class="num">{{ group.num }}</span>
+            <h3>{{ group.en }}</h3>
+            <span class="ja">/ {{ group.label }} · {{ group.exercises | length }} EXERCISES</span>
+          </div>
+        </div>
+
+        {% if group.exercises %}
+        <!-- Column headers -->
+        <div class="ex-row" style="background:transparent;padding:8px 16px">
+          <div class="label-xs">NAME</div>
+          <div class="label-xs">UNIT</div>
+          <div class="label-xs" style="text-align:right">BEST</div>
+          <div class="label-xs" style="text-align:right"></div>
+          <div></div>
+        </div>
+
+        {% for ex in group.exercises %}
+        <div class="ex-row">
+          <div>
+            <div class="name">{{ ex.name }}</div>
+            <div class="meta">{{ ex.name_en }}</div>
+          </div>
+          <div class="meta">{{ ex.unit | default('-') }}</div>
+          <div class="mono" style="text-align:right;font-size:14px">
+            <span style="color:var(--accent);font-weight:700">{{ ex.best_weight | default(0) | int }}</span>
+            {{ ex.unit | default('kg') }}
+          </div>
+          <div></div>
+          <div style="display:flex;gap:4px;justify-content:flex-end">
+            <button class="btn sm ghost" title="編集"
+                    @click='openEdit({{ ex | tojson }})'>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>
+            </button>
+            <button class="btn sm ghost" title="削除"
+                    @click='openDelete({{ ex | tojson }})'>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg>
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+
+        {% else %}
+        <div class="ex-group-empty">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <span>この部位の種目は登録されていません</span>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Add modal -->
+    <div x-show="showAddModal" x-transition.opacity
+         @click.self="closeAll()"
+         style="position:fixed;inset:0;background:rgba(0,0,0,0.75);display:grid;place-items:center;z-index:100">
+      <div class="card flush" style="width:480px">
+        <div class="card-header">
+          <span class="card-title">新規種目を追加</span>
+          <button class="btn sm ghost" @click="closeAll()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+        <form method="post" action="/exercises">
+          <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+            <div class="field">
+              <label>種目名 (日本語)</label>
+              <input class="input" name="name" placeholder="例: ベンチプレス" required>
+            </div>
+            <div class="field">
+              <label>NAME (EN)</label>
+              <input class="input mono" name="name_en" placeholder="BENCH PRESS">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 100px;gap:12px">
+              <div class="field">
+                <label>部位</label>
+                <select class="select" name="body_part">
+                  {% for part in parts %}
+                  <option value="{{ part.id }}">{{ part.label }} / {{ part.en }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="field">
+                <label>単位</label>
+                <select class="select" name="unit">
+                  <option value="kg">kg</option>
+                  <option value="lb">lb</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label>現在のベスト</label>
+              <input class="input num-input" type="number" name="best_weight" value="0" min="0" step="0.5">
+            </div>
+          </div>
+          <div style="padding:16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px">
+            <button class="btn" type="button" @click="closeAll()">キャンセル</button>
+            <button class="btn primary" type="submit">
+              <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h8V4M8 20v-7h8v7"/></svg>
+              追加
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edit modal -->
+    <div x-show="showEditModal" x-transition.opacity
+         @click.self="closeAll()"
+         style="position:fixed;inset:0;background:rgba(0,0,0,0.75);display:grid;place-items:center;z-index:100">
+      <template x-if="editTarget">
+        <div class="card flush" style="width:480px">
+          <div class="card-header">
+            <span class="card-title">種目を編集</span>
+            <button class="btn sm ghost" @click="closeAll()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <form method="post" :action="'/exercises/' + editTarget.exercise_id + '/update'">
+            <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+              <div class="field">
+                <label>種目名 (日本語)</label>
+                <input class="input" name="name" :value="editTarget.name" required>
+              </div>
+              <div class="field">
+                <label>NAME (EN)</label>
+                <input class="input mono" name="name_en" :value="editTarget.name_en">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 100px;gap:12px">
+                <div class="field">
+                  <label>部位</label>
+                  <select class="select" name="body_part">
+                    {% for part in parts %}
+                    <option value="{{ part.id }}" :selected="editTarget.body_part === '{{ part.id }}'">{{ part.label }} / {{ part.en }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="field">
+                  <label>単位</label>
+                  <select class="select" name="unit">
+                    <option value="kg" :selected="editTarget.unit === 'kg'">kg</option>
+                    <option value="lb" :selected="editTarget.unit === 'lb'">lb</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <label>現在のベスト</label>
+                <input class="input num-input" type="number" name="best_weight" :value="editTarget.best_weight" min="0" step="0.5">
+              </div>
+            </div>
+            <div style="padding:16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px">
+              <button class="btn" type="button" @click="closeAll()">キャンセル</button>
+              <button class="btn primary" type="submit">
+                <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h8V4M8 20v-7h8v7"/></svg>
+                保存
+              </button>
+            </div>
+          </form>
+        </div>
+      </template>
+    </div>
+
+    <!-- Delete confirm modal -->
+    <div x-show="showDeleteModal" x-transition.opacity
+         @click.self="closeAll()"
+         style="position:fixed;inset:0;background:rgba(0,0,0,0.75);display:grid;place-items:center;z-index:100">
+      <template x-if="deleteTarget">
+        <div class="card flush" style="width:380px">
+          <div class="card-header">
+            <span class="card-title">種目を削除</span>
+          </div>
+          <div class="card-body">
+            <p style="margin:0;color:var(--fg-1);font-size:13px;line-height:1.6">
+              「<span x-text="deleteTarget.name"></span>」を削除します。この操作は取り消せません。
+            </p>
+          </div>
+          <div style="padding:16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px">
+            <button class="btn" type="button" @click="closeAll()">キャンセル</button>
+            <form method="post" :action="'/exercises/' + deleteTarget.exercise_id + '/delete'" style="margin:0">
+              <button class="btn danger" type="submit">
+                <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg>
+                削除
+              </button>
+            </form>
+          </div>
+        </div>
+      </template>
+    </div>
+
+  </main>
+</div>
+{% endblock %}

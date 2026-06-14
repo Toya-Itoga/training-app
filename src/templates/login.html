@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}LOG IN{% endblock %}
+{% block body %}
+<div class="app login-mode">
+  <div class="login-wrap">
+
+    <!-- Left art pane -->
+    <div class="login-art">
+      <div class="logo-block">
+        <div class="brand-mark">I</div>
+        <div class="brand-name">IRONLOG</div>
+      </div>
+      <div class="quote">
+        NO<br>
+        <em>EXCUSES.</em><br>
+        ONLY<br>
+        REPS.
+      </div>
+    </div>
+
+    <!-- Right form pane -->
+    <div class="login-form-wrap">
+      <form class="login-form" method="post" action="/login">
+        <div>
+          <div class="eyebrow" style="margin-bottom:8px">/ SIGN IN</div>
+          <h2>LOG IN.<br>LIFT UP.</h2>
+        </div>
+
+        {% if error %}
+        <div class="login-error">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <div class="field">
+          <label for="username">USERNAME</label>
+          <input id="username" class="input" name="username" type="text"
+                 placeholder="username" autocomplete="username" required>
+        </div>
+
+        <div class="field">
+          <label for="password">PASSWORD</label>
+          <input id="password" class="input" name="password" type="password"
+                 placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+
+        <button class="btn primary lg" type="submit" style="gap:8px">
+          <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          SIGN IN
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

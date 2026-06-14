@@ -1,0 +1,65 @@
+<!-- Day detail panel — rendered inline or via HTMX swap -->
+<div class="card day-detail" style="min-height:400px">
+  {% if day_workout %}
+  <h3>{{ selected_display.split(" ")[0] }}<span style="color:var(--fg-3);font-size:18px;margin-left:8px">{{ selected_display.split(" ")[1] if " " in selected_display else "" }}</span></h3>
+  <div class="sub-date">{{ selected_weekday }} · {{ selected_date }}</div>
+
+  <!-- Quick stats -->
+  <div style="display:flex;justify-content:space-between;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--line-strong);gap:10px">
+    <div style="min-width:0">
+      <div class="label-xs">ボリューム</div>
+      <div class="display" style="font-size:22px;margin-top:4px">
+        {{ day_workout.total_volume | int }}<span style="color:var(--fg-3);font-size:11px;margin-left:4px;font-family:var(--font-mono);letter-spacing:0.12em">KG</span>
+      </div>
+    </div>
+    <div style="min-width:0">
+      <div class="label-xs">セット</div>
+      <div class="display" style="font-size:22px;margin-top:4px">{{ day_workout.total_sets }}</div>
+    </div>
+    <div style="min-width:0">
+      <div class="label-xs">種目</div>
+      <div class="display" style="font-size:22px;margin-top:4px">{{ day_workout.exercise_count }}</div>
+    </div>
+  </div>
+
+  <!-- Exercise blocks -->
+  {% for block in day_workout.exercises %}
+  {% set ex = block.exercise %}
+  {% set subtotal = block.sets | sum(attribute='weight') %}
+  <div class="workout-block">
+    <h4>
+      <span>
+        <span class="mono" style="color:var(--fg-3);margin-right:8px">{{ "%02d" | format(loop.index) }}</span>
+        {{ ex.name }}
+        <span class="chip muted" style="margin-left:6px">{{ ex.body_part }}</span>
+      </span>
+      <span class="mono" style="color:var(--fg-2)">
+        {{ block.sets | sum(attribute='weight') | int }} kg
+      </span>
+    </h4>
+    <div class="sets">
+      {% for s in block.sets %}
+      <span class="set-chip">
+        <span style="color:var(--fg-3)">#{{ loop.index }}</span>
+        {{ s.weight | int }}kg × {{ s.reps }}
+      </span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- Actions -->
+  <div style="margin-top:16px;display:flex;gap:8px">
+    <a class="btn sm" href="/record?date={{ selected_date }}" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>
+      編集
+    </a>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="1"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+    <div style="margin-top:12px">この日のトレーニング記録はありません</div>
+  </div>
+  {% endif %}
+</div>

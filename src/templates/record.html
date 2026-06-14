@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}記録する{% endblock %}
+{% block body %}
+<script>
+  // JSON データを属性経由ではなく script タグで渡す。
+  // {{ parts | tojson }} は Markup を返し autoescape を通過しないため
+  // x-data 属性内の " 文字が属性を途中で終端させてしまうのを回避する。
+  window.__recordData__ = {
+    date:     {{ selected_date | tojson }},
+    exercises: {{ exercises_json | safe }},
+    parts:     {{ parts | tojson }},
+    blocks:    {{ initial_blocks_json | safe }}
+  };
+</script>
+<div class="app">
+  {% set active = "record" %}{% include "_sidebar.html" %}
+
+  <main class="main" x-data="recordStore()" x-cloak>
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="crumbs">
+        <div class="eyebrow" x-text="'/ TRAINING LOG · ' + date"></div>
+        <h1>記録する</h1>
+      </div>
+      <div class="actions">
+        <a class="btn" href="/dashboard">
+          <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          キャンセル
+        </a>
+        <button class="btn primary" @click="save()" :disabled="saving">
+          <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h8V4M8 20v-7h8v7"/></svg>
+          <span x-text="saving ? '保存中...' : '保存'"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Save toast -->
+    <div x-show="saved" x-transition
+         style="background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);padding:10px 14px;font-family:var(--font-mono);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+      記録を保存しました ·
+      <span x-text="totalSets + ' SETS'"></span> ·
+      <span x-text="totalVolume.toLocaleString() + ' KG'"></span>
+    </div>
+
+    <div class="grid" style="grid-template-columns:1fr 240px;flex:1;min-height:0;overflow:hidden;gap:16px">
+
+      <!-- Left: exercise blocks -->
+      <div style="overflow:auto;padding-right:4px;display:flex;flex-direction:column">
+
+        <!-- Date meta row -->
+        <div class="card" style="margin-bottom:16px;display:grid;grid-template-columns:200px 1fr auto;gap:16px;align-items:end;flex-shrink:0">
+          <div class="field">
+            <label>日付</label>
+            <input class="input mono" type="date" x-model="date">
+          </div>
+          <div></div>
+          <div style="display:flex;gap:8px">
+            <div class="chip accent" x-text="totalVolume.toLocaleString() + ' KG'"></div>
+          </div>
+        </div>
+
+        <!-- Exercise blocks -->
+        <template x-for="(block, bi) in blocks" :key="bi">
+          <div class="card flush" style="margin-bottom:16px">
+            <div class="card-header" style="flex-wrap:wrap;gap:10px">
+              <div style="display:flex;align-items:baseline;gap:12px;min-width:0;flex:1">
+                <span class="mono" style="color:var(--fg-3);font-size:12px;flex-shrink:0" x-text="'EX/' + String(bi + 1).padStart(2,'0')"></span>
+                <span class="display" style="font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0" x-text="block.exercise.name"></span>
+                <span class="chip muted" style="flex-shrink:0" x-text="block.exercise.body_part"></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+                <span class="mono" style="color:var(--fg-2);font-size:11px;letter-spacing:0.12em;white-space:nowrap">
+                  BEST <span x-text="(block.exercise.best_weight || 0) + (block.exercise.unit || 'kg')"></span>
+                </span>
+                <button class="btn sm ghost" @click="removeBlock(bi)" title="削除">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 7V4h4v3M6 7l1 13h10l1-13"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <!-- Column headers -->
+              <div class="set-row" style="border-bottom:1px solid var(--line-strong);padding-bottom:6px">
+                <div class="label-xs" style="text-align:center">SET</div>
+                <div class="label-xs">REPS</div>
+                <div class="label-xs">WEIGHT (KG)</div>
+                <div class="label-xs" style="text-align:right">VOLUME</div>
+                <div></div>
+              </div>
+
+              <!-- Set rows -->
+              <template x-for="(s, si) in block.sets" :key="si">
+                <div class="set-row">
+                  <div class="set-n" x-text="String(si + 1).padStart(2,'0')"></div>
+                  <input class="input num-input" type="number" min="1" :value="s.reps"
+                         @input="updateReps(bi, si, $event.target.value)">
+                  <input class="input num-input" type="number" min="0" step="0.5" :value="s.weight"
+                         @input="updateWeight(bi, si, $event.target.value)">
+                  <div class="mono" style="color:var(--fg-1);text-align:right;padding-right:4px">
+                    <span x-text="((s.reps || 0) * (s.weight || 0)).toLocaleString()"></span>
+                    <span style="color:var(--fg-3);font-size:11px"> kg</span>
+                  </div>
+                  <button class="icon-btn" @click="removeSet(bi, si)" title="セット削除">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+                  </button>
+                </div>
+              </template>
+
+              <button class="btn sm ghost" @click="addSet(bi)" style="margin-top:14px">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                セット追加
+              </button>
+
+              <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:flex;justify-content:space-between">
+                <span class="label-xs">SUBTOTAL</span>
+                <span class="mono" style="font-size:13px">
+                  <span x-text="block.sets.length + ' sets'"></span> ·
+                  <span x-text="block.sets.reduce((s,x)=>s+(x.reps||0)*(x.weight||0),0).toLocaleString() + ' kg'"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Add exercise CTA -->
+        <button class="btn lg" @click="showPicker = true"
+                style="width:100%;justify-content:center;padding:24px;border:1px dashed var(--line-strong);background:transparent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          種目を追加
+        </button>
+      </div>
+
+      <!-- Right: summary panel -->
+      <aside style="overflow:auto;padding-right:4px">
+        <div class="card flush">
+          <div class="card-header">
+            <span class="card-title">今日のサマリ</span>
+          </div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+            <div>
+              <div class="label-xs">総ボリューム</div>
+              <div class="display" style="font-size:40px;margin-top:4px">
+                <span x-text="totalVolume.toLocaleString()"></span>
+                <span style="font-size:14px;color:var(--fg-2);margin-left:6px">KG</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:14px">
+              <div style="flex:1">
+                <div class="label-xs">セット数</div>
+                <div class="mono" style="font-size:20px;margin-top:4px" x-text="totalSets"></div>
+              </div>
+              <div style="flex:1">
+                <div class="label-xs">種目数</div>
+                <div class="mono" style="font-size:20px;margin-top:4px" x-text="blocks.length"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Exercise picker modal -->
+    <div x-show="showPicker" x-transition.opacity
+         @click.self="showPicker = false"
+         style="position:fixed;inset:0;background:rgba(0,0,0,0.75);display:grid;place-items:center;z-index:100">
+      <div class="card flush" style="width:600px;max-height:80vh;display:flex;flex-direction:column">
+        <div class="card-header">
+          <span class="card-title">種目を選択</span>
+          <button class="btn sm ghost" @click="showPicker = false">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+
+        <!-- Part filter chips -->
+        <div style="padding:12px 20px;border-bottom:1px solid var(--line);display:flex;gap:6px;flex-wrap:wrap">
+          <button :class="'chip' + (pickerFilter === 'all' ? ' accent' : '')"
+                  @click="pickerFilter = 'all'"
+                  style="cursor:pointer;border:0;font-family:var(--font-mono)">ALL</button>
+          <template x-for="p in parts" :key="p.id">
+            <button :class="'chip' + (pickerFilter === p.id ? ' accent' : '')"
+                    @click="pickerFilter = p.id"
+                    style="cursor:pointer;border:0;font-family:var(--font-mono)"
+                    x-text="p.en"></button>
+          </template>
+        </div>
+
+        <!-- Exercise list -->
+        <div style="overflow:auto;padding:8px">
+          <template x-for="ex in filteredExercises" :key="ex.exercise_id">
+            <button class="ex-row" @click="addExercise(ex)"
+                    style="width:100%;background:transparent;border:0;color:inherit;text-align:left;cursor:pointer;grid-template-columns:1fr 80px 100px 40px">
+              <div>
+                <div class="name" x-text="ex.name"></div>
+                <div class="meta" x-text="ex.name_en"></div>
+              </div>
+              <div class="chip muted" style="justify-self:start" x-text="ex.body_part"></div>
+              <div class="mono" style="color:var(--fg-2);font-size:12px;text-align:right">
+                <span style="color:var(--accent)" x-text="ex.best_weight"></span>
+                <span x-text="' ' + ex.unit"></span>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+{% endblock %}
